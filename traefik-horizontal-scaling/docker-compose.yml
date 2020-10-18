@@ -1,0 +1,65 @@
+version: '3'
+
+services:
+  reverse-proxy:
+    # The official v2 Traefik docker image
+    image: traefik:v2.3
+    container_name: traefik
+    # Enables the web UI and tells Traefik to listen to docker
+    command:
+      # Allow access through :443 and:80
+      - --entrypoints.web.address=:80 
+      - --entrypoints.websecure.address=:443
+      # Development access to dashboard 
+      - --api.insecure
+      # Production dashboard
+      # - --api
+      # Setup docker provider
+      - --providers.docker
+      #- --providers.docker.exposedbydefault=false
+
+      # Setup automatic TLS certificate generation. Disabled for local dev.
+      # - --certificatesresolvers.le.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+      # - --certificatesresolvers.le.acme.email=artofimag@gmail.com
+      # - --certificatesresolvers.le.acme.storage=/acme.json
+      # - --certificatesresolvers.le.acme.tlschallenge=true
+    ports:
+      - "80:80"
+      - "443:443"
+      # The Web UI (enabled by --api.insecure=true)
+      - "8080:8080"
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./configuration/acme.json:/acme.json
+    # labels:
+      # Dashboard (enable https dashboard)
+      # - "traefik.http.routers.traefik.rule=Host(`api.testserver.com`)"
+      # - "traefik.http.routers.traefik.service=api@internal"
+      # - "traefik.http.routers.traefik.middlewares=admin"
+      # - "traefik.http.routers.traefik.tls.certresolver=le"
+      # - "traefik.http.routers.traefik.entrypoints=websecure"
+      # Allow BasicAuth check. Only in conjuncion with https
+      # - "traefik.http.middlewares.admin.basicauth.users=admin:polyadmin"
+  main-server:
+    build: ./
+    image: artofimagination/main-server
+    labels:
+      # Define the host the request shall target
+      - traefik.http.routers.test.rule=Host(`testserver.localhost`)
+      # Define automatic cert generation resolver. Disabled for local dev.
+      # - traefik.http.routers.test.middlewares=auth
+      # - traefik.http.routers.test.tls.certresolver=le
+      # - traefik.http.routers.test.entrypoints=websecure
+      # Redirect non-https middleware requests
+      # - traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https
+      # Catch everything
+      # - traefik.http.routers.redirs.rule=hostregexp(`{host:.+}`)
+      # - traefik.http.routers.redirs.entrypoints=web"
+      # - traefik.http.routers.redirs.middlewares=redirect-to-https
+      # Sticky session for loadbalancing (round robin)
+      #- traefik.http.services.test.loadBalancer.sticky.cookie=true
+      # Port the server instances can be accessed through
+      - traefik.http.services.test.loadbalancer.server.port=8081
+    depends_on: 
+      - reverse-proxy

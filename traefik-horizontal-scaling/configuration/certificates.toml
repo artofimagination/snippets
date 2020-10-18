@@ -1,0 +1,6 @@
+# in files/certificates.toml
+
+[[tls.certificates]] #first certificate
+   certFile = “/configuration/tls.cert” 
+   keyFile = “/configuration/tls.key”
+   
