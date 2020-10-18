@@ -1,0 +1,88 @@
+version: '3'
+networks:
+  frontend:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.18.0.0/24
+  backend:
+    internal: true
+
+services:
+  mysql:
+    build:
+      context: ./turn-server/mysql
+    restart: unless-stopped
+    volumes:
+      - ./turn-server/mysql/mysql-data:/var/lib/mysql
+    env_file: 
+      - turn-server/mysql/mysql.env
+    networks:
+      - backend
+  turn-server:
+    build:
+      context: ./turn-server/coturn
+    restart: always
+    volumes:
+      - ${PWD}/turn-server/coturn/turnserver.conf:/etc/turnserver.conf
+      - ${PWD}/server.pem:/etc/ssl/private/privkey.pem
+      - ${PWD}/server.pub.pem:/etc/ssl/certs/cert.pem
+      - ${PWD}/CA.pub.pem:/etc/ssl/certs/ca.pem
+    ports:
+  ## STUN/TURN
+      - "3478:3478"
+      - "3478:3478/udp"
+      - "3479:3479"
+      - "3479:3479/udp"
+      - "80:80"
+      - "80:80/udp"
+  ## STUN/TURN SSL
+      - "5349:5349"
+      - "5349:5349/udp"
+      - "5350:5350"
+      - "5350:5350/udp"
+      - "443:443"
+      - "443:443/udp"
+  # Relay Ports
+  #      - "49152-65535:49152-65535"
+  #      - "49152-65535:49152-65535/udp"
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      - mysql
+    env_file:
+      - turn-server/coturn/coturn.env
+      - turn-server/mysql/mysql.env
+  webrtc-server:
+    build:
+      context: .
+      dockerfile: ./Server/Dockerfile
+    restart: always
+    container_name: webrtc-server
+    ports:
+      - "8080:8080"
+    volumes:
+      - ${PWD}/server.pem:/etc/ssl/private/privkey.pem
+      - ${PWD}/server.pub.pem:/etc/ssl/certs/cert.pem
+      - ${PWD}/CA.pub.pem:/etc/ssl/certs/ca.pem
+    networks:
+      - frontend
+  webrtc-client:
+    build:
+      context: .
+      dockerfile: ./Client/Dockerfile
+    restart: always
+    container_name: webrtc-client
+    ports:
+      - "8082:8082"
+    networks:
+      - frontend
+    volumes:
+      - ${PWD}/server.pem:/etc/ssl/private/privkey.pem
+      - ${PWD}/server.pub.pem:/etc/ssl/certs/cert.pem
+      - ${PWD}/CA.pub.pem:/etc/ssl/certs/ca.pem
+    depends_on:
+      - turn-server
+      - webrtc-server 

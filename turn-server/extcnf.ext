@@ -1,0 +1,10 @@
+subjectAltName = @alt_names
+basicConstraints = critical,CA:false
+
+[alt_names]
+IP.1=127.0.0.1
+IP.2=172.18.0.3
+IP.3=172.18.0.2
+IP.4=172.18.0.4
+DNS.1=webrtc-client
+DNS.2=webrtc-server
