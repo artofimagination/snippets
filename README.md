@@ -1,5 +1,5 @@
 # POC snippets
-Contains small POC snippets for a variatey of functionalities.
+Contains small POC snippets for a variety of functionalities.
 
 ## Content:
   - [turn server](https://github.com/artofimagination/snippets/tree/master/turn-server) test based on [coturn](https://github.com/coturn/coturn) and pion [webrtc](https://github.com/pion/webrtc)
