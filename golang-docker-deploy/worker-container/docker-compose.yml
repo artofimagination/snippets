@@ -1,0 +1,9 @@
+version: '3'
+
+services:
+  worker-server:
+    build: ./
+    image: artofimagination/worker-server
+    container_name: worker-server
+    ports:
+      - 8082:8082

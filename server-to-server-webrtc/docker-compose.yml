@@ -1,0 +1,38 @@
+version: '2'
+networks:
+  development:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.18.0.0/24
+        gateway: 172.18.0.1
+
+services:
+  webrtc-server1:
+    build: ./
+    container_name: webrtc-server1
+    image: artofimagination/webrtc-server1
+    ports:
+      - "8080:8080"
+    networks:
+      - development
+  webrtc-server2:
+    build: ./
+    container_name: webrtc-server2
+    image: artofimagination/webrtc-server2
+    ports:
+      - "8081:8081"
+    networks:
+      - development
+  webrtc-client:
+    build: ./
+    container_name: webrtc-client
+    image: artofimagination/webrtc-client
+    ports:
+      - "8082:8082"
+    networks:
+      - development
+    depends_on:
+      - webrtc-server1 
+      - webrtc-server2
