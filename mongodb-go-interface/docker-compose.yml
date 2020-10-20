@@ -1,0 +1,35 @@
+version: '2'
+networks:
+  development:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.18.0.0/24
+        gateway: 172.18.0.1
+
+services:
+  user-db:
+    container_name: user-db
+    image: mongo
+    ports:
+      - 27017:27017
+    networks:
+      - development
+    volumes: 
+      - ./user-settings:/data/db
+      - ./mongod.conf:/etc/mongod.conf
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: "${DB_USER}"
+      MONGO_INITDB_ROOT_PASSWORD: "${DB_NAME}"
+      MONGO_INITDB_DATABASE: "${DB_PASS}"
+  main-server:
+    build: ./
+    container_name: main-server
+    image: artofimagination/main-server
+    ports:
+      - "8080:8080"
+    networks:
+      - development
+    depends_on: 
+      - user-db
