@@ -10,7 +10,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 
 # Clone Coturn
 WORKDIR ${BUILD_PREFIX}
-RUN git clone https://github.com/artofimagination/coturn-test.git coturn
+RUN git clone https://github.com/coturn/coturn.git coturn
 
 # Build Coturn
 WORKDIR coturn
