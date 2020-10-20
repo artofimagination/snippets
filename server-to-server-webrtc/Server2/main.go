@@ -21,4 +21,5 @@ func main() {
 
 	// Start HTTP server that accepts requests from the offer process to exchange SDP and Candidates
 	panic(http.ListenAndServe(*webrtc.AnswerAddr, nil))
+	select {}
 }

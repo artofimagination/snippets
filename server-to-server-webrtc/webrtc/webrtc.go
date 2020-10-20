@@ -24,9 +24,9 @@ var AnswerAddr *string = nil
 // SendingFrequency determines how often a message is sent via webRTC.
 var SendingFrequency time.Duration = 5000 * time.Millisecond
 
-func signalCandidate(addr string, c *webrtc.ICECandidate) error {
+func signalCandidate(addr string, candidateID int, c *webrtc.ICECandidate) error {
 	payload := []byte(c.ToJSON().Candidate)
-	resp, err := http.Post(fmt.Sprintf("http://%s/candidate", addr), "application/json; charset=utf-8", bytes.NewReader(payload)) //nolint:noctx
+	resp, err := http.Post(fmt.Sprintf("http://%s/candidate%d", addr, candidateID), "application/json; charset=utf-8", bytes.NewReader(payload)) //nolint:noctx
 	if err != nil {
 		return err
 	}
@@ -38,10 +38,10 @@ func signalCandidate(addr string, c *webrtc.ICECandidate) error {
 	return nil
 }
 
-// SetupProductSide sets up the webrtc connection on the product project side
+// SetupServer sets up the webrtc connection on the product project side
 // Each product project will have its own candidate id that is known for the platform side
 // for identification purposes.
-func SetupProductSide(businessLogic func() string, candiateID int) {
+func SetupServer(businessLogic func() string, candidateID int) {
 	flag.Parse()
 
 	var candidatesMux sync.Mutex
@@ -75,7 +75,7 @@ func SetupProductSide(businessLogic func() string, candiateID int) {
 		desc := peerConnection.RemoteDescription()
 		if desc == nil {
 			pendingCandidates = append(pendingCandidates, c)
-		} else if onICECandidateErr := signalCandidate(*OfferAddr, c); onICECandidateErr != nil {
+		} else if onICECandidateErr := signalCandidate(*OfferAddr, candidateID, c); onICECandidateErr != nil {
 			panic(onICECandidateErr)
 		}
 	})
@@ -83,7 +83,7 @@ func SetupProductSide(businessLogic func() string, candiateID int) {
 	// A HTTP handler that allows the other Pion instance to send us ICE candidates
 	// This allows us to add ICE candidates faster, we don't have to wait for STUN or TURN
 	// candidates which may be slower
-	candidatePath := fmt.Sprintf("/candidate")
+	candidatePath := fmt.Sprintf("/candidate%d", candidateID)
 	http.HandleFunc(candidatePath, func(w http.ResponseWriter, r *http.Request) {
 		candidate, candidateErr := ioutil.ReadAll(r.Body)
 		if candidateErr != nil {
@@ -95,7 +95,7 @@ func SetupProductSide(businessLogic func() string, candiateID int) {
 	})
 
 	// A HTTP handler that processes a SessionDescription given to us from the other Pion process
-	sdpPath := fmt.Sprintf("/sdp")
+	sdpPath := fmt.Sprintf("/sdp%d", candidateID)
 	http.HandleFunc(sdpPath, func(w http.ResponseWriter, r *http.Request) {
 		sdp := webrtc.SessionDescription{}
 		if err := json.NewDecoder(r.Body).Decode(&sdp); err != nil {
@@ -117,7 +117,7 @@ func SetupProductSide(businessLogic func() string, candiateID int) {
 		if err != nil {
 			panic(err)
 		}
-		resp, err := http.Post(fmt.Sprintf("http://%s/sdp%d", *OfferAddr, candiateID), "application/json; charset=utf-8", bytes.NewReader(payload)) // nolint:noctx
+		resp, err := http.Post(fmt.Sprintf("http://%s/sdp%d", *OfferAddr, candidateID), "application/json; charset=utf-8", bytes.NewReader(payload)) // nolint:noctx
 		if err != nil {
 			panic(err)
 		} else if closeErr := resp.Body.Close(); closeErr != nil {
@@ -132,7 +132,7 @@ func SetupProductSide(businessLogic func() string, candiateID int) {
 
 		candidatesMux.Lock()
 		for _, c := range pendingCandidates {
-			onICECandidateErr := signalCandidate(*OfferAddr, c)
+			onICECandidateErr := signalCandidate(*OfferAddr, candidateID, c)
 			if onICECandidateErr != nil {
 				panic(onICECandidateErr)
 			}
@@ -173,9 +173,9 @@ func SetupProductSide(businessLogic func() string, candiateID int) {
 	})
 }
 
-// SetupPlatformSide initializes the webrtc connection and sends the initial offer
+// SetupClient initializes the webrtc connection and sends the initial offer
 // to the product project candidates identified by candidate id.
-func SetupPlatformSide(businessLogic func() string, candiateID int) {
+func SetupClient(businessLogic func() string, candidateID int) {
 	flag.Parse()
 
 	var candidatesMux sync.Mutex
@@ -211,7 +211,7 @@ func SetupPlatformSide(businessLogic func() string, candiateID int) {
 		desc := peerConnection.RemoteDescription()
 		if desc == nil {
 			pendingCandidates = append(pendingCandidates, c)
-		} else if onICECandidateErr := signalCandidate(*AnswerAddr, c); err != nil {
+		} else if onICECandidateErr := signalCandidate(*AnswerAddr, candidateID, c); err != nil {
 			panic(onICECandidateErr)
 		}
 	})
@@ -219,7 +219,7 @@ func SetupPlatformSide(businessLogic func() string, candiateID int) {
 	// A HTTP handler that allows the other Pion instance to send us ICE candidates
 	// This allows us to add ICE candidates faster, we don't have to wait for STUN or TURN
 	// candidates which may be slower
-	candidatePath := fmt.Sprintf("/candidate%d", candiateID)
+	candidatePath := fmt.Sprintf("/candidate%d", candidateID)
 	http.HandleFunc(candidatePath, func(w http.ResponseWriter, r *http.Request) {
 		candidate, candidateErr := ioutil.ReadAll(r.Body)
 		if candidateErr != nil {
@@ -231,7 +231,7 @@ func SetupPlatformSide(businessLogic func() string, candiateID int) {
 	})
 
 	// A HTTP handler that processes a SessionDescription given to us from the other Pion process
-	sdpPath := fmt.Sprintf("/sdp%d", candiateID)
+	sdpPath := fmt.Sprintf("/sdp%d", candidateID)
 	http.HandleFunc(sdpPath, func(w http.ResponseWriter, r *http.Request) {
 		sdp := webrtc.SessionDescription{}
 		if sdpErr := json.NewDecoder(r.Body).Decode(&sdp); sdpErr != nil {
@@ -246,7 +246,7 @@ func SetupPlatformSide(businessLogic func() string, candiateID int) {
 		defer candidatesMux.Unlock()
 
 		for _, c := range pendingCandidates {
-			if onICECandidateErr := signalCandidate(*AnswerAddr, c); onICECandidateErr != nil {
+			if onICECandidateErr := signalCandidate(*AnswerAddr, candidateID, c); onICECandidateErr != nil {
 				panic(onICECandidateErr)
 			}
 		}
@@ -302,11 +302,10 @@ func SetupPlatformSide(businessLogic func() string, candiateID int) {
 	if err != nil {
 		panic(err)
 	}
-	resp, err := http.Post(fmt.Sprintf("http://%s/sdp", *AnswerAddr), "application/json; charset=utf-8", bytes.NewReader(payload)) // nolint:noctx
+	resp, err := http.Post(fmt.Sprintf("http://%s/sdp%d", *AnswerAddr, candidateID), "application/json; charset=utf-8", bytes.NewReader(payload)) // nolint:noctx
 	if err != nil {
 		panic(err)
 	} else if err := resp.Body.Close(); err != nil {
 		panic(err)
 	}
-
 }

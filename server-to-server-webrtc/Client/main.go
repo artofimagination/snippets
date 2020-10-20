@@ -20,13 +20,13 @@ func main() {
 	// Start HTTP server that accepts requests from the answer process
 	go func() { panic(http.ListenAndServe(*webrtc.OfferAddr, nil)) }()
 	// Start Server
-	webrtc.SetupPlatformSide(sayHello, candidateID)
+	webrtc.SetupClient(sayHello, candidateID)
 	log.Println("First test")
 
 	webrtc.AnswerAddr = flag.String("answer-address2", "webrtc-server2:8081", "Address that the Answer HTTP server is hosted on.")
 	webrtc.SendingFrequency = 500 * time.Millisecond
 	candidateID = 2
-	webrtc.SetupPlatformSide(sayHello, candidateID)
+	go webrtc.SetupClient(sayHello, candidateID)
 	log.Println("Second test")
 	select {}
 }

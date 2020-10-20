@@ -1,4 +1,4 @@
-version: '2'
+version: '3'
 networks:
   development:
     driver: bridge
@@ -6,11 +6,12 @@ networks:
       driver: default
       config:
       - subnet: 172.18.0.0/24
-        gateway: 172.18.0.1
 
 services:
   webrtc-server1:
-    build: ./
+    build:
+      context: .
+      dockerfile: ./Server1/Dockerfile
     container_name: webrtc-server1
     image: artofimagination/webrtc-server1
     ports:
@@ -18,7 +19,9 @@ services:
     networks:
       - development
   webrtc-server2:
-    build: ./
+    build:
+      context: .
+      dockerfile: ./Server2/Dockerfile
     container_name: webrtc-server2
     image: artofimagination/webrtc-server2
     ports:
@@ -26,7 +29,9 @@ services:
     networks:
       - development
   webrtc-client:
-    build: ./
+    build:
+      context: .
+      dockerfile: ./Client/Dockerfile
     container_name: webrtc-client
     image: artofimagination/webrtc-client
     ports:
