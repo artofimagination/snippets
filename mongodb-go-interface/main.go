@@ -40,7 +40,7 @@ func insertUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Fprintln(w, err.Error())
 	} else {
-		fmt.Fprintln(w, fmt.Sprintf("%+v", result))
+		fmt.Fprintln(w, result)
 	}
 }
 
@@ -58,7 +58,7 @@ func getUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Fprintln(w, err.Error())
 	} else {
-		fmt.Fprintln(w, fmt.Sprintf("%+v", result))
+		fmt.Fprintln(w, result)
 	}
 }
 
@@ -76,14 +76,14 @@ func getSettings(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Fprintln(w, err.Error())
 	} else {
-		fmt.Fprintln(w, fmt.Sprintf("%+v", resultUser))
+		fmt.Fprintln(w, resultUser)
 	}
 
 	resultSettings, err := mongodb.GetSettings(&resultUser.SettingsID)
 	if err != nil {
 		fmt.Fprintln(w, err.Error())
 	} else {
-		fmt.Fprintln(w, fmt.Sprintf("%+v", resultSettings))
+		fmt.Fprintln(w, resultSettings)
 	}
 }
 
@@ -117,14 +117,14 @@ func deleteSettings(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		fmt.Fprintln(w, err.Error())
 	} else {
-		fmt.Fprintln(w, fmt.Sprintf("%+v", resultUser))
+		fmt.Fprintln(w, resultUser)
 	}
 
 	resultSettings, err := mongodb.DeleteSettings(&resultUser.SettingsID)
 	if err != nil {
 		fmt.Fprintln(w, err.Error())
 	} else {
-		fmt.Fprintln(w, fmt.Sprintf("%+v", resultSettings))
+		fmt.Fprintln(w, resultSettings)
 	}
 }
 

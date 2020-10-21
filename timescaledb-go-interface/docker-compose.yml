@@ -1,0 +1,34 @@
+version: '3'
+networks:
+  development:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.18.0.0/24
+
+services:
+  user-data-db:
+    container_name: user-data-db
+    image: "timescale/timescaledb:1.7.0-pg12"
+    environment:
+      - POSTGRES_USER=${TIMESCALE_DB_USER}
+      - POSTGRES_PASSWORD=${TIMESCALE_DB_PASSWORD}
+      - POSTGRES_DB=data
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data-timescaledb:/var/lib/postgresql/data
+    networks: 
+      - development
+    command: postgres -c shared_preload_libraries=timescaledb
+  main-server:
+    build: ./
+    container_name: main-server
+    image: artofimagination/main-server
+    ports:
+      - "8080:8080"
+    networks:
+      - development
+    depends_on: 
+      - user-data-db
