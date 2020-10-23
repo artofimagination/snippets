@@ -1,0 +1,11 @@
+production:
+    dialect: mysql
+    datasource: root@/user_database?parseTime=true
+    dir: migrations
+    table: migrations
+
+development:
+    dialect: mysql
+    datasource: root@/user_database?parseTime=true
+    dir: migrations
+    table: migrations

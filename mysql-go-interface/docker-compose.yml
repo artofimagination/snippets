@@ -1,0 +1,32 @@
+version: '3'
+networks:
+  development:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.18.0.0/24
+
+services:
+  user-db:
+    container_name: user-db
+    image: mysql:8.0.21
+    ports:
+      - 3306:3306
+    networks:
+      - development
+    volumes: 
+      - ./user-settings:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_DB_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB_NAME}
+  main-server:
+    build: ./
+    container_name: main-server
+    image: artofimagination/main-server
+    ports:
+      - "8080:8080"
+    networks:
+      - development
+    depends_on: 
+      - user-db

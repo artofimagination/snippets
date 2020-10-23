@@ -149,17 +149,17 @@ func DeleteUser(email string) error {
 		return err
 	}
 
+	_, err = deleteUserEntry(email)
+	if err != nil {
+		return err
+	}
+
 	result, err := DeleteSettings(&user.SettingsID)
 	if err != nil {
 		return err
 	}
 	if result.DeletedCount == 0 {
 		log.Println("There is no settings associated with the user ", email)
-	}
-
-	_, err = deleteUserEntry(email)
-	if err != nil {
-		return err
 	}
 	return nil
 }
