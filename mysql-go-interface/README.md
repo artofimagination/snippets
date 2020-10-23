@@ -1,6 +1,6 @@
 # MYSQL example
 
-This example meant to test basic functionalities of mongoDB. The example allows to create,query and delete users and belonging user settings.
+This example meant to test basic functionalities of MYSQL. The example allows to create,query and delete users and belonging user settings.
 The documents look as follows:
 
 - Documents in users collection
