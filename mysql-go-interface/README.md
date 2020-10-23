@@ -23,7 +23,7 @@ The documents look as follows:
 
 Run ```docker-compose up --build --force-recreate -d main-server``` to generate and start all containers.
 
-In order to access the db run: ```docker exec -it user-data-db bash -c "mongo mongodb://root:123secure@user-db:27017"```
+In order to access the db run: ```docker exec -it user-db bash -c "mysql -uroot -p123secure user_database```
 
 ## Execution examples
 
@@ -33,4 +33,4 @@ Use the browser or curl command to execute the following:
 - delete user specified by the email: ```http://localhost:8080/delete?email=testEmail```
 - check user password and email: ```http://localhost:8080/check?email=testEmail&password=testPass```
 - get user settings belonging to the user with specified email: ```http://localhost:8080/get-settings?email=testEmail```
-- delete user settings belonging to the user with specified email: ```http://localhost:8080/delete-settings?email=testEmail```
+- delete user settings belonging to the user with specified email, this test shall fail since the user has the settigns foreign key: ```http://localhost:8080/delete-settings?email=testEmail```
