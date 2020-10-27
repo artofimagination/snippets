@@ -11,8 +11,11 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"test-server/webrtc"
 	"time"
+
+	"test-server/webrtc"
+
+	pion "github.com/pion/webrtc/v3"
 )
 
 func sayHello() string {
@@ -24,6 +27,19 @@ func main() {
 	webrtc.AnswerAddr = flag.String("answer-address", "webrtc-server:8080", "Address that the Answer HTTP server is hosted on.")
 	webrtc.SendingFrequency = 500 * time.Millisecond
 	webrtc.TurnAuthUserName = "testUser"
+	webrtc.Config = pion.Configuration{
+
+		ICEServers: []pion.ICEServer{
+			{
+				URLs:           []string{webrtc.TurnServerAddress, webrtc.StunServerAddress},
+				Username:       webrtc.TurnAuthUserName,
+				Credential:     webrtc.TurnAuthCredential,
+				CredentialType: pion.ICECredentialTypePassword,
+			},
+		},
+
+		ICETransportPolicy: pion.ICETransportPolicyRelay,
+	}
 	candidateID := 1
 
 	cert, err := tls.LoadX509KeyPair("/etc/ssl/certs/cert.pem", "/etc/ssl/private/privkey.pem")
@@ -44,8 +60,12 @@ func main() {
 	block, _ := pem.Decode([]byte(pembytes))
 	if block == nil {
 		panic("failed to parse certificate PEM")
-
 	}
+
+	if err != nil {
+		panic("failed to parse certificate PEM: " + err.Error())
+	}
+
 	certPub, err := x509.ParseCertificate(block.Bytes)
 	if err != nil {
 		panic("failed to parse certificate: " + err.Error())
@@ -72,6 +92,7 @@ func main() {
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
+				MinVersion:   tls.VersionTLS12,
 				Certificates: []tls.Certificate{cert},
 				RootCAs:      rootCAs,
 			},

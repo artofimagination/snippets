@@ -27,13 +27,13 @@ var AnswerAddr *string = nil
 // SendingFrequency determines how often a message is sent via webRTC.
 var SendingFrequency time.Duration = 500 * time.Millisecond
 
-var TurnServerAddress string = "turns:172.18.0.3:5349?transport=udp"
-var StunServerAddress string = "stun:172.18.0.3:5349?transport=udp"
+var TurnServerAddress string = "turns:turn-server:5349?transport=udp"
+var StunServerAddress string = "stun:turn-server:5349?transport=udp"
 var TurnAuthCredential string = "default123secret"
 var TurnAuthUserName string = "defaultUser"
 var Certificates tls.Certificate = tls.Certificate{}
 
-var config webrtc.Configuration = webrtc.Configuration{
+var Config webrtc.Configuration = webrtc.Configuration{
 
 	ICEServers: []webrtc.ICEServer{
 		{
@@ -124,8 +124,8 @@ func SetupProductSide(client *http.Client, businessLogic func() string, candiate
 	if err != nil {
 		panic(err)
 	}
-	config.Certificates = []webrtc.Certificate{*cert}
-	peerConnection, err := api.NewPeerConnection(config)
+	Config.Certificates = []webrtc.Certificate{*cert}
+	peerConnection, err := api.NewPeerConnection(Config)
 	if err != nil {
 		panic(err)
 	}
@@ -151,8 +151,7 @@ func SetupProductSide(client *http.Client, businessLogic func() string, candiate
 	// A HTTP handler that allows the other Pion instance to send us ICE candidates
 	// This allows us to add ICE candidates faster, we don't have to wait for STUN or TURN
 	// candidates which may be slower
-	candidatePath := fmt.Sprintf("/candidate")
-	http.HandleFunc(candidatePath, func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/candidate", func(w http.ResponseWriter, r *http.Request) {
 		candidate, candidateErr := ioutil.ReadAll(r.Body)
 		if candidateErr != nil {
 			panic(candidateErr)
@@ -164,8 +163,7 @@ func SetupProductSide(client *http.Client, businessLogic func() string, candiate
 	})
 
 	// A HTTP handler that processes a SessionDescription given to us from the other Pion process
-	sdpPath := fmt.Sprintf("/sdp")
-	http.HandleFunc(sdpPath, func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/sdp", func(w http.ResponseWriter, r *http.Request) {
 		sdp := webrtc.SessionDescription{}
 		if err := json.NewDecoder(r.Body).Decode(&sdp); err != nil {
 			panic(err)
@@ -259,9 +257,9 @@ func SetupPlatformSide(client *http.Client, businessLogic func() string, candiat
 	if err != nil {
 		panic(err)
 	}
-	config.Certificates = []webrtc.Certificate{*cert}
+	Config.Certificates = []webrtc.Certificate{*cert}
 	// Create a new RTCPeerConnection
-	peerConnection, err := api.NewPeerConnection(config)
+	peerConnection, err := api.NewPeerConnection(Config)
 	if err != nil {
 		panic(err)
 	}

@@ -8,15 +8,23 @@ The turn server is configured to use:
   - tls
   - pre set realm name
   - run on localhost
-  
+
+## Set tls certificates  
 By default all certificates are pregenerated an uploaded into the repo. Feel free to regenerate them by running generateCerts.sh
 To configure the tls extensions modify
   - [extcnfCA.ext](https://github.com/artofimagination/snippets/blob/master/turn-server/extcnfCA.ext) for the CA
   - [extcnf.ext](https://github.com/artofimagination/snippets/blob/master/turn-server/extcnf.ext) for all the other certificates
   
 ## Start system
-  - `docker-compose build`
-  - `docker-compose up -d webrtc-client`
+  - `docker-compose up -d --force-recreate webrtc-client`
+
+## Set user
+Got the syetem working by setting the plain password in the webrtc clients and using the encrupted password in the `turnserver.conf`.
+To get the encryption run:
+  - ```docker exec -it turn-server bash -c "turnadmin -k -u username -r realm_name -p passwd"```
+  - copy the generated key into turnserver.conf under "'Static' user accounts" section like the example states there
+
+Both webrtc-client and webrtc-server has their own user registered (testUser and testUser2)
   
 # Known issues
 At the moment the webrtc datachannel works only if the ICE Server is configured with `ICETransportPolicyAll`.

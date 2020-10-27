@@ -15,7 +15,7 @@ services:
       context: ./turn-server/mysql
     restart: unless-stopped
     volumes:
-      - ./turn-server/mysql/mysql-data:/var/lib/mysql
+      - /srv/turn-server-mysql:/var/lib/mysql
     env_file: 
       - turn-server/mysql/mysql.env
     networks:
@@ -24,11 +24,12 @@ services:
     build:
       context: ./turn-server/coturn
     restart: always
+    container_name: turn-server
     volumes:
-      - ${PWD}/turn-server/coturn/turnserver.conf:/etc/turnserver.conf
-      - ${PWD}/server.pem:/etc/ssl/private/privkey.pem
-      - ${PWD}/server.pub.pem:/etc/ssl/certs/cert.pem
-      - ${PWD}/CA.pub.pem:/etc/ssl/certs/ca.pem
+      - ./turn-server/coturn/turnserver.conf:/etc/turnserver.conf
+      - ./server.pem:/etc/ssl/private/privkey.pem
+      - ./server.pub.pem:/etc/ssl/certs/cert.pem
+      - ./CA.pub.pem:/etc/ssl/certs/ca.pem
     ports:
   ## STUN/TURN
       - "3478:3478"
@@ -64,9 +65,9 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ${PWD}/server.pem:/etc/ssl/private/privkey.pem
-      - ${PWD}/server.pub.pem:/etc/ssl/certs/cert.pem
-      - ${PWD}/CA.pub.pem:/etc/ssl/certs/ca.pem
+      - ./server.pem:/etc/ssl/private/privkey.pem
+      - ./server.pub.pem:/etc/ssl/certs/cert.pem
+      - ./CA.pub.pem:/etc/ssl/certs/ca.pem
     networks:
       - frontend
   webrtc-client:
@@ -80,9 +81,9 @@ services:
     networks:
       - frontend
     volumes:
-      - ${PWD}/server.pem:/etc/ssl/private/privkey.pem
-      - ${PWD}/server.pub.pem:/etc/ssl/certs/cert.pem
-      - ${PWD}/CA.pub.pem:/etc/ssl/certs/ca.pem
+      - ./server.pem:/etc/ssl/private/privkey.pem
+      - ./server.pub.pem:/etc/ssl/certs/cert.pem
+      - ./CA.pub.pem:/etc/ssl/certs/ca.pem
     depends_on:
       - turn-server
       - webrtc-server 
