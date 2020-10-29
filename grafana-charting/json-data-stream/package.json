@@ -1,0 +1,26 @@
+{
+  "name": "artofimagination-data-stream",
+  "version": "1.0.0",
+  "description": "Streaming json data",
+  "scripts": {
+    "build": "grafana-toolkit plugin:build",
+    "test": "grafana-toolkit plugin:test",
+    "dev": "grafana-toolkit plugin:dev",
+    "watch": "grafana-toolkit plugin:dev --watch"
+  },
+  "author": "Peter Devenyi",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@grafana/data": "^7.0.0",
+    "@grafana/runtime": "^7.0.0",
+    "@grafana/toolkit": "^7.0.0",
+    "@grafana/ui": "^7.0.0",
+    "@types/lodash": "latest",
+    "@testing-library/jest-dom": "5.4.0",
+    "@testing-library/react": "^10.0.2",
+    "rxjs":"latest"
+  },
+  "engines": {
+    "node": ">=12 <13"
+  }
+}
