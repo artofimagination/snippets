@@ -1,0 +1,23 @@
+version: '3'
+
+services:
+  grafana-charting:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - 3000:3000
+    user: ${USER_ID}
+    environment: 
+      - GF_INSTALL_PLUGINS=simpod-json-datasource, marcusolsson-json-datasource, grafana-simple-json-datasource
+    volumes:
+      - ~/volumes/grafana-data:/var/lib/grafana
+      - ./grafana/json-data-stream:/var/lib/grafana/plugins/json-data-stream
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini
+  main-server:
+    build: ./
+    image: artofimagination/main-server
+    container_name: main-server
+    ports:
+      - 8080:8080
+    depends_on: 
+      - grafana-charting
