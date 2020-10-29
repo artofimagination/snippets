@@ -32,7 +32,9 @@ This example is meant to be a POC and it is in a very early stage yet.
 
 2. Data display gets slow after a while
 
-3. There are building issues with the datasource (the fail does not prevent the usage of the datasource)
+3. The panel visualization is cleared every time you update the dashboard. If you have access to historical data, you can add, or backfill, it to the data frame before the first call to subscriber.next().
+
+4. There are building issues with the datasource (the fail does not prevent the usage of the datasource)
 ```
 peter@peter-GL63-8RCS:~/Git/snippets/grafana-charting/json-data-stream$ yarn dev
 yarn run v1.22.5
