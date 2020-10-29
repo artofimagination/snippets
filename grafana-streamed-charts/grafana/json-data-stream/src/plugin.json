@@ -4,6 +4,9 @@
   "id": "artofimagination-data-stream",
   "metrics": true,
   "streaming": true,
+
+  "includes": [{ "type": "dashboard", "name": "DataStream", "path": "dashboards/DataStream.json" }],
+
   "info": {
     "description": "Streaming json data",
     "author": {
