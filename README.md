@@ -9,5 +9,6 @@ Golang snippets
   - [timescaleDB basic example](https://github.com/artofimagination/snippets/tree/master/timescaledb-go-interface) is a basic timescaleDB setup handling json data in a table
   - [docker container depolyment](https://github.com/artofimagination/snippets/tree/master/golang-docker-deploy) test starts a docker container using existing image
   - [server to server webrtc](https://github.com/artofimagination/snippets/tree/master/server-to-server-webrtc) is a [pion to pion](https://github.com/pion/webrtc) webrtc example implementation
+  - [grafana json streaming datasource](https://github.com/artofimagination/snippets/tree/master/grafana-streamed-charts) is a simple data streamer backend for [grafana](https://github.com/grafana/grafana) dashboards
   
 Under [MIT](https://github.com/artofimagination/snippets/blob/master/LICENSE) license.
