@@ -1,4 +1,4 @@
-module mysqldb-go-interface
+module github.com/artofimagination/snippets/mysqldb-go-interface
 
 go 1.15
 
