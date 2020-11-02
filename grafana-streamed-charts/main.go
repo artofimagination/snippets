@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
 	"math/big"
 	"net/http"
 	"os"
@@ -13,21 +14,25 @@ import (
 	"time"
 )
 
+// Charts data representation.
 type datapoint struct {
-	PanelID int              `json:"panelid"` // Grafana panel id.
-	RefID   string           `json:"refid"`   // Grafana panel query ref id.
-	Values  map[string]int64 `json:"values"`  // Values associated with the row text. Timestamp is hardcoded every time.
+	PanelID int                    `json:"panelid"` // Grafana panel id.
+	RefID   string                 `json:"refid"`   // Grafana panel query ref id.
+	Values  map[string]interface{} `json:"values"`  // Values associated with the row text. Timestamp is hardcoded every time.
 }
 
-type Config struct {
-	Rows []string // contains the rows to display. Sent by grafana.
+type QueryConfig struct {
+	Writer http.ResponseWriter
+	Series []string
+	Ticker *time.Ticker
 }
 
-var configMap = make(map[int]map[string]Config)
+var configMap = make(map[int]map[string]QueryConfig)
+var origin = ""
 
 func main() {
 	// Grafana sends a request to initiate streaming in the form of http://localhost:8080?panelid=5&refid=A&data-rows=test1,test2
-	http.HandleFunc("/", handler)
+	http.HandleFunc("/", streamHandler)
 	http.HandleFunc("/show", showChart)
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		panic(err)
@@ -48,18 +53,77 @@ func showChart(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		panic("expected http.ResponseWriter to be an http.Flusher")
+func sendData(pID int, rID string) {
+	dataRow := make(map[string]interface{})
+	dataRow["timestamp"] = time.Now().UnixNano() / 1000000
+	offset := 0
+	for _, row := range configMap[pID][rID].Series {
+		switch row {
+		case "cpu_load":
+			random, _ := rand.Int(rand.Reader, big.NewInt(10))
+			dataRow[row] = random.Int64() + int64(offset)
+		case "available_memory":
+			random, _ := rand.Int(rand.Reader, big.NewInt(10))
+			dataRow[row] = random.Int64() + int64(offset)
+		case "row_count":
+			random, _ := rand.Int(rand.Reader, big.NewInt(10))
+			dataRow[row] = random.Int64() + int64(offset)
+		}
+		offset += 10
 	}
+	currentPoint := &datapoint{
+		RefID:   rID,
+		PanelID: pID,
+		Values:  dataRow,
+	}
+	j, _ := json.Marshal(currentPoint)
+	configMap[pID][rID].Writer.Header().Set("Access-Control-Allow-Origin", origin)
+	fmt.Fprintf(configMap[pID][rID].Writer, "%s\n", j)
+	configMap[pID][rID].Writer.(http.Flusher).Flush() // Trigger "chunked" encoding and s
+}
 
+func streamData(pID int, rID string) {
+	log.Println("Start streaming")
+	log.Println(configMap)
+	defer configMap[pID][rID].Ticker.Stop()
+	for ; true; <-configMap[pID][rID].Ticker.C {
+		sendData(pID, rID)
+	}
+}
+
+// Whenever a grafana query request arrives this handler is called.
+// Based on the parsed parameters the configMap is extended
+// Structure of config map:
+//			Panel -> queries/panel -> series/queries
+// At the moment each query has its own ticker channel setup based on the sampling time (calculated based on the grafana data points config)
+// Each series is represented by a string that can be configured in grafana through the dataText field.
+// Once the ticker is set, the respective query results will be streamed back (periodical http flush) to the grafana server.
+func streamHandler(w http.ResponseWriter, r *http.Request) {
+	origin = r.Header.Get("Origin")
 	// Parses the parameters.
 	panelParam := r.URL.Query().Get("panelid")
 	if panelParam == "" {
 		panic("No panel id")
 	}
 	panelid, _ := strconv.Atoi(panelParam)
+
+	startTimeParam := r.URL.Query().Get("start")
+	if startTimeParam == "" {
+		panic("No start time")
+	}
+	startTime, _ := strconv.Atoi(startTimeParam)
+
+	endTimeParam := r.URL.Query().Get("end")
+	if endTimeParam == "" {
+		panic("No end time")
+	}
+	endTime, _ := strconv.Atoi(endTimeParam)
+
+	datapointsParam := r.URL.Query().Get("datapoints")
+	if datapointsParam == "" {
+		panic("No datapoints")
+	}
+	datapoints, _ := strconv.Atoi(datapointsParam)
 
 	rowsParam := r.URL.Query().Get("data-rows")
 	if rowsParam == "" {
@@ -71,40 +135,19 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		panic("No ref id")
 	}
 
-	// Stores the row details for each query
-	config := Config{
-		Rows: strings.Split(rowsParam, ","),
+	// Sets the sampling time based on the allowed grafana data points
+	samplingTimeMs := (endTime - startTime) / datapoints
+	if _, ok := configMap[panelid]; !ok {
+		configMap[panelid] = make(map[string]QueryConfig)
 	}
-	queryConfig := make(map[string]Config)
-	configMap[panelid] = queryConfig
-	configMap[panelid][refidParam] = config
-	ticker := time.NewTicker(50 * time.Millisecond)
-	defer ticker.Stop()
-	for ; true; <-ticker.C {
-		data := []datapoint{}
-		offset := 0
-		// For each query and for each row in the queries generate random values with 10 offset
-		for panel, query := range configMap {
-			for queryID, v := range query {
-				dataRow := make(map[string]int64)
-				dataRow["timestamp"] = time.Now().UnixNano() / 1000000
-				for _, row := range v.Rows {
-					random, _ := rand.Int(rand.Reader, big.NewInt(10))
-					dataRow[row] = random.Int64() + int64(offset)
-					offset += 10
-				}
-				currentPoint := &datapoint{
-					RefID:   queryID,
-					PanelID: panel,
-					Values:  dataRow,
-				}
-				data = append(data, *currentPoint)
-			}
-		}
 
-		j, _ := json.Marshal(data)
-		w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
-		fmt.Fprintf(w, "%s\n", j)
-		flusher.Flush() // Trigger "chunked" encoding and send a chunk...
+	// Creates the config map
+	configMap[panelid][refidParam] = QueryConfig{
+		Series: strings.Split(rowsParam, ","),
+		Ticker: time.NewTicker(time.Duration(samplingTimeMs) * time.Millisecond),
+		Writer: w,
 	}
+	w.Header().Set("Access-Control-Allow-Origin", origin)
+
+	streamData(panelid, refidParam)
 }
