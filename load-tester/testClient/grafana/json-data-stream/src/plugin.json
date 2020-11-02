@@ -1,0 +1,43 @@
+{
+  "type": "datasource",
+  "name": "data-stream",
+  "id": "artofimagination-data-stream",
+  "metrics": true,
+  "streaming": true,
+
+  "includes": [{ "type": "dashboard", "name": "DataStream", "path": "dashboards/DataStream.json" }],
+
+  "info": {
+    "description": "Streaming json data",
+    "author": {
+      "name": "Peter Devenyi",
+      "url": "https://github.com/artofimagination"
+    },
+    "keywords": [
+      "json",
+      "stream",
+      "live"
+    ],
+    "logos": {
+      "small": "img/logo.svg",
+      "large": "img/logo.svg"
+    },
+    "links": [
+      {
+        "name": "Website",
+        "url": "https://github.com/grafana/simple-datasource"
+      },
+      {
+        "name": "License",
+        "url": "https://github.com/grafana/simple-datasource/blob/master/LICENSE"
+      }
+    ],
+    "screenshots": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "dependencies": {
+    "grafanaVersion": "6.5.x",
+    "plugins": []
+  }
+}
