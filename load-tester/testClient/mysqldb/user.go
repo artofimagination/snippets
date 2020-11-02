@@ -192,8 +192,11 @@ func GetUserCount() (int, error) {
 	count := 0
 	queryString := "SELECT COUNT(*) FROM users"
 	db, err := ConnectSystem()
-	query, err := db.Query(queryString)
+	if err != nil {
+		return 0, err
+	}
 
+	query, err := db.Query(queryString)
 	if err != nil {
 		return 0, err
 	}

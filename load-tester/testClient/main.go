@@ -31,6 +31,8 @@ type datapoint struct {
 	Values  map[string]interface{} `json:"values"`  // Values associated with the row text. Timestamp is hardcoded every time.
 }
 
+// QueryConfig contains ticker, response writer and series names
+// for each series belonging to a query and for each query belonging to a panel.
 type QueryConfig struct {
 	Writer http.ResponseWriter
 	Series []string
@@ -203,14 +205,12 @@ func insertIntoDB(w http.ResponseWriter, r *http.Request) {
 	names, ok := r.URL.Query()["name"]
 	if !ok || len(names[0]) < 1 {
 		panic("Url Param 'name' is missing")
-		return
 	}
 
 	name := names[0]
 	emails, ok := r.URL.Query()["email"]
 	if !ok || len(emails[0]) < 1 {
 		panic("Url Param 'email' is missing")
-		return
 	}
 
 	email := emails[0]
@@ -218,7 +218,6 @@ func insertIntoDB(w http.ResponseWriter, r *http.Request) {
 	passwords, ok := r.URL.Query()["password"]
 	if !ok || len(emails[0]) < 1 {
 		panic("Url Param 'password' is missing")
-		return
 	}
 
 	password := passwords[0]
@@ -231,7 +230,10 @@ func insertIntoDB(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		failedInsertRequestCount.Incr(1)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		_, err = w.Write([]byte(err.Error()))
+		if err != nil {
+			panic("Failed to write error response")
+		}
 	}
 	insertRequestRateCount.Incr(1)
 	insertExecCounter.Incr(time.Since(start).Nanoseconds())
