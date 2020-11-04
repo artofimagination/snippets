@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"math"
@@ -11,36 +10,17 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
-	"strings"
 	"syscall"
 	"text/template"
 	"time"
 
-	"load-tester/mysqldb"
-
+	"github.com/artofimagination/grafana-json-streaming-datasource/streamer"
+	"github.com/artofimagination/mysql-user-db-go-interface/mysqldb"
 	linuxproc "github.com/c9s/goprocinfo/linux"
 	"github.com/gorilla/mux"
 	"github.com/paulbellamy/ratecounter"
 	"github.com/pkg/errors"
 )
-
-// Charts data representation.
-type datapoint struct {
-	PanelID int                    `json:"panelid"` // Grafana panel id.
-	RefID   string                 `json:"refid"`   // Grafana panel query ref id.
-	Values  map[string]interface{} `json:"values"`  // Values associated with the row text. Timestamp is hardcoded every time.
-}
-
-// QueryConfig contains ticker, response writer and series names
-// for each series belonging to a query and for each query belonging to a panel.
-type QueryConfig struct {
-	Writer http.ResponseWriter
-	Series []string
-	Ticker *time.Ticker
-}
-
-var configMap = make(map[int]map[string]QueryConfig)
-var origin = ""
 
 // Placholders for measurements
 var totalPrevCPU = uint64(0)
@@ -79,53 +59,6 @@ func getCPUUsage() {
 
 	avgIOWait.Incr(int64(diffIOWait))
 	avgCPU.Incr(int64(percentage * 100))
-}
-
-func sendData(pID int, rID string) {
-	dataRow := make(map[string]interface{})
-	dataRow["timestamp"] = time.Now().UnixNano() / 1000000
-	for _, row := range configMap[pID][rID].Series {
-		switch row {
-		case "cpu_load":
-			getCPUUsage()
-			dataRow[row] = float32(avgCPU.Rate() / 100.0)
-		case "available_memory":
-			dataRow[row] = getMemInfo()
-		case "row_count":
-			count, _ := mysqldb.GetUserCount()
-			dataRow[row] = count
-		case "insert_exec_time":
-			dataRow[row] = insertExecCounter.Rate()
-		case "select_exec_time":
-			dataRow[row] = selectElapsed
-		case "rate_count":
-			dataRow[row] = insertRequestRateCount.Rate()
-		case "failed_count":
-			dataRow[row] = failedInsertRequestCount.Value()
-		case "total_elapsed":
-			dataRow[row] = time.Since(totalInsertElapsed).Nanoseconds()
-		case "iowait":
-			dataRow[row] = float32(1000000000 * avgIOWait.Rate() / 60.0) // convert Jiffies to nano second
-		}
-	}
-	currentPoint := &datapoint{
-		RefID:   rID,
-		PanelID: pID,
-		Values:  dataRow,
-	}
-	j, _ := json.Marshal(currentPoint)
-	configMap[pID][rID].Writer.Header().Set("Access-Control-Allow-Origin", origin)
-	fmt.Fprintf(configMap[pID][rID].Writer, "%s\n", j)
-	configMap[pID][rID].Writer.(http.Flusher).Flush() // Trigger "chunked" encoding and s
-}
-
-func streamData(pID int, rID string) {
-	log.Println("Start streaming")
-	log.Println(configMap)
-	defer configMap[pID][rID].Ticker.Stop()
-	for ; true; <-configMap[pID][rID].Ticker.C {
-		sendData(pID, rID)
-	}
 }
 
 func getMemInfo() uint64 {
@@ -192,7 +125,7 @@ func showChart(w http.ResponseWriter, r *http.Request) {
 	}
 	t := template.Must(template.ParseFiles(wd + "/charts/chart.html"))
 
-	empty := datapoint{}
+	empty := 0
 	err = t.ExecuteTemplate(w, "chart.html", empty)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -254,7 +187,7 @@ func selectFromDB(w http.ResponseWriter, r *http.Request) {
 // Each series is represented by a string that can be configured in grafana through the dataText field.
 // Once the ticker is set, the respective query results will be streamed back (periodical http flush) to the grafana server.
 func streamHandler(w http.ResponseWriter, r *http.Request) {
-	origin = r.Header.Get("Origin")
+	streamer.Origin = r.Header.Get("Origin")
 	// Parses the parameters.
 	panelParam := r.URL.Query().Get("panelid")
 	if panelParam == "" {
@@ -290,21 +223,34 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 		panic("No ref id")
 	}
 
-	// Sets the sampling time based on the allowed grafana data points
-	samplingTimeMs := (endTime - startTime) / datapoints
-	if _, ok := configMap[panelid]; !ok {
-		configMap[panelid] = make(map[string]QueryConfig)
+	fillDataRow := func(row string, dataRow map[string]interface{}) {
+		switch row {
+		case "cpu_load":
+			getCPUUsage()
+			dataRow[row] = float32(avgCPU.Rate() / 100.0)
+		case "available_memory":
+			dataRow[row] = getMemInfo()
+		case "row_count":
+			count, _ := mysqldb.GetUserCount()
+			dataRow[row] = count
+		case "insert_exec_time":
+			dataRow[row] = insertExecCounter.Rate()
+		case "select_exec_time":
+			dataRow[row] = selectElapsed
+		case "rate_count":
+			dataRow[row] = insertRequestRateCount.Rate()
+		case "failed_count":
+			dataRow[row] = failedInsertRequestCount.Value()
+		case "total_elapsed":
+			dataRow[row] = time.Since(totalInsertElapsed).Nanoseconds()
+		case "iowait":
+			dataRow[row] = float32(1000000000 * avgIOWait.Rate() / 60.0) // convert Jiffies to nano second
+		}
 	}
+	streamer.Configure(panelid, refidParam, rowsParam, startTime, endTime, datapoints, w)
+	w.Header().Set("Access-Control-Allow-Origin", streamer.Origin)
 
-	// Creates the config map
-	configMap[panelid][refidParam] = QueryConfig{
-		Series: strings.Split(rowsParam, ","),
-		Ticker: time.NewTicker(time.Duration(samplingTimeMs) * time.Millisecond),
-		Writer: w,
-	}
-	w.Header().Set("Access-Control-Allow-Origin", origin)
-
-	streamData(panelid, refidParam)
+	streamer.StreamData(panelid, refidParam, fillDataRow)
 }
 
 func HelloServer(w http.ResponseWriter, r *http.Request) {
