@@ -3,7 +3,6 @@ package mysqldb
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/google/uuid"
@@ -206,6 +205,6 @@ func GetUserCount() (int, error) {
 	if err := query.Scan(&count); err != nil {
 		return 0, err
 	}
-	log.Println(count)
+
 	return count, nil
 }

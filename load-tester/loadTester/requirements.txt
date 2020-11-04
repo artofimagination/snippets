@@ -1,1 +1,1 @@
-git://github.com/locustio/locust.git@master#egg=locust
+locust==1.3.1

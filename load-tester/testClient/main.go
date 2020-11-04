@@ -200,8 +200,6 @@ func showChart(w http.ResponseWriter, r *http.Request) {
 }
 
 func insertIntoDB(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.Header.Get("Origin"))
-	log.Println("Inserting user")
 	names, ok := r.URL.Query()["name"]
 	if !ok || len(names[0]) < 1 {
 		panic("Url Param 'name' is missing")
@@ -311,5 +309,4 @@ func streamHandler(w http.ResponseWriter, r *http.Request) {
 
 func HelloServer(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Hello, I am load tester!\n")
-	log.Println("Hello, I am load tester!")
 }

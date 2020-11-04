@@ -1,8 +1,6 @@
 package mysqldb
 
 import (
-	"log"
-
 	"github.com/google/uuid"
 )
 
@@ -21,7 +19,7 @@ func AddSettings() (*uuid.UUID, error) {
 	defer db.Close()
 
 	newID, err := uuid.NewUUID()
-	log.Println(newID)
+
 	if err != nil {
 		return nil, err
 	}
