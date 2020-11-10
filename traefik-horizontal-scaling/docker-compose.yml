@@ -1,4 +1,13 @@
 version: '3'
+networks:
+  test_frontend:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.18.0.0/24
+  test_backend:
+    internal: true  
 
 services:
   reverse-proxy:
@@ -20,7 +29,7 @@ services:
 
       # Setup automatic TLS certificate generation. Disabled for local dev.
       # - --certificatesresolvers.le.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
-      # - --certificatesresolvers.le.acme.email=artofimag@gmail.com
+      # - --certificatesresolvers.le.acme.email=test@test.com
       # - --certificatesresolvers.le.acme.storage=/acme.json
       # - --certificatesresolvers.le.acme.tlschallenge=true
     ports:
@@ -41,6 +50,9 @@ services:
       # - "traefik.http.routers.traefik.entrypoints=websecure"
       # Allow BasicAuth check. Only in conjuncion with https
       # - "traefik.http.middlewares.admin.basicauth.users=admin:polyadmin"
+    networks: 
+      - test_frontend
+      - test_backend
   main-server:
     build: ./
     image: artofimagination/main-server
@@ -61,5 +73,7 @@ services:
       #- traefik.http.services.test.loadBalancer.sticky.cookie=true
       # Port the server instances can be accessed through
       - traefik.http.services.test.loadbalancer.server.port=8081
+    networks: 
+      - test_backend
     depends_on: 
       - reverse-proxy
